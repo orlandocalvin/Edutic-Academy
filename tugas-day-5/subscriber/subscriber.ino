@@ -3,7 +3,7 @@
 #include <ArduinoJson.h>
 
 // WiFi Credentials
-const char *ssid = "your wifi";
+const char *ssid = "your ssid";
 const char *password = "your password";
 
 // MQTT Broker & Topics
@@ -22,8 +22,8 @@ PubSubClient mqtt(espClient);
 #define TOUCH2 14  // T6
 
 // Simple touch logic (tune these if needed)
-const uint16_t THRESH1 = 30;  // lower = more touch
-const uint16_t THRESH2 = 30;
+const uint16_t THRESH1 = 500;
+const uint16_t THRESH2 = 500;
 const uint32_t DEBOUNCE_MS = 80;
 
 bool state1 = false, state2 = false;   // last published states
