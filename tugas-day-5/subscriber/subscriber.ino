@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <LiquidCrystal_I2C.h>
 
 // WiFi Credentials
 const char *ssid = "your ssid";
@@ -16,6 +17,11 @@ const char *TOPIC_RELAY2 = "kelompok1/relay2";
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+char lastTemp[8] = "-";
+bool relay1 = false;
+bool relay2 = false;
 
 // Touch Pins (ESP32)
 #define TOUCH1 12  // T5
@@ -60,6 +66,8 @@ void reconnect() {
       mqtt.subscribe(TOPIC_TEMP);
       mqtt.subscribe(TOPIC_HUMID);
       mqtt.subscribe(TOPIC_JSON);
+      mqtt.subscribe(TOPIC_RELAY1);
+      mqtt.subscribe(TOPIC_RELAY2);
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqtt.state());
@@ -90,12 +98,31 @@ void callback(char *topic, byte *payload, unsigned int length) {
       Serial.print(" °C | Hum: ");
       Serial.print((const char*)doc["humidity"]);
       Serial.println(" %");
+      strncpy(lastTemp, (const char*)doc["temperature"], sizeof(lastTemp) - 1);
+      lastTemp[sizeof(lastTemp) - 1] = '\0';
     } else {
       Serial.println("-> JSON parse error");
     }
   }
 
   Serial.println();
+
+  // ADD: support plain temperature topic (fallback)
+  if (strcmp(topic, TOPIC_TEMP) == 0) {
+  strncpy(lastTemp, msg, sizeof(lastTemp) - 1);
+  lastTemp[sizeof(lastTemp) - 1] = '\0';
+  }
+
+  // ADD: relay status topics
+  if (strcmp(topic, TOPIC_RELAY1) == 0) {
+    relay1 = (strcmp(msg, "on") == 0);
+  }
+  if (strcmp(topic, TOPIC_RELAY2) == 0) {
+    relay2 = (strcmp(msg, "on") == 0);
+  }
+
+  // ADD: refresh LCD after any update
+  updateLCD();
 }
 
 // Read touch and publish relay commands (on change only)
@@ -110,9 +137,9 @@ void handleTouch() {
   if (t1 != state1 && (now - last1) >= DEBOUNCE_MS) {
     state1 = t1;
     last1 = now;
-    mqtt.publish(TOPIC_RELAY1, state1 ? "on" : "off");
+    mqtt.publish(TOPIC_RELAY1, state1 ? "1" : "0");
     Serial.print("Relay1 <- ");
-    Serial.print(state1 ? "on" : "off");
+    Serial.print(state1 ? "1" : "0");
     Serial.print(" | raw=");
     Serial.println(v1);
   }
@@ -120,12 +147,26 @@ void handleTouch() {
   if (t2 != state2 && (now - last2) >= DEBOUNCE_MS) {
     state2 = t2;
     last2 = now;
-    mqtt.publish(TOPIC_RELAY2, state2 ? "on" : "off");
+    mqtt.publish(TOPIC_RELAY2, state2 ? "1" : "0");
     Serial.print("Relay2 <- ");
-    Serial.print(state2 ? "on" : "off");
+    Serial.print(state2 ? "1" : "0");
     Serial.print(" | raw=");
     Serial.println(v2);
   }
+}
+
+void updateLCD() {
+  lcd.setCursor(0, 0);
+  lcd.print("Suhu: ");
+  lcd.print(lastTemp);
+  lcd.print("   "); // clear tail
+
+  lcd.setCursor(0, 1);
+  lcd.print("R1: ");
+  lcd.print(relay1 ? "ON " : "OFF");
+  lcd.print(", R2: ");
+  lcd.print(relay2 ? "ON " : "OFF");
+  lcd.print(" ");  // clear tail
 }
 
 void setup() {
@@ -134,6 +175,14 @@ void setup() {
   setup_wifi();
   mqtt.setServer(mqtt_server, 1883);
   mqtt.setCallback(callback);
+
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Waiting data...");
+  lcd.setCursor(0, 1);
+  lcd.print("R1: ---, R2: ---");
 }
 
 void loop() {
