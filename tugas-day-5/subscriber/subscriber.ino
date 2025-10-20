@@ -32,8 +32,8 @@ bool relay2 = false;
 #define TOUCH2 14 // T6
 
 // Touch Thresholds (tune based on raw values)
-const uint16_t THRESH1 = 30;
-const uint16_t THRESH2 = 30;
+const uint16_t THRESH1 = 500;
+const uint16_t THRESH2 = 500;
 const uint32_t DEBOUNCE_MS = 80;
 
 // Touch logic
