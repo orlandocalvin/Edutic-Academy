@@ -3,8 +3,8 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-const char *ssid = "SUPER-ORCA";
-const char *password = "zxcvbnmv";
+const char *ssid = "your wifi";
+const char *password = "your password";
 
 float temperature;
 float humidity;

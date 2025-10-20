@@ -2,11 +2,11 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-// ====== WiFi Credentials ======
-const char *ssid     = "SUPER-ORCA";
-const char *password = "zxcvbnmv";
+// WiFi Credentials 
+const char *ssid = "your wifi";
+const char *password = "your password";
 
-// ====== MQTT Broker & Topics ======
+// MQTT Broker & Topics 
 const char *mqtt_server = "broker.emqx.io";
 const char *TOPIC_TEMP  = "kelompok1/temperature";
 const char *TOPIC_HUMID = "kelompok1/humidity";
@@ -15,7 +15,7 @@ const char *TOPIC_JSON  = "kelompok1/dht";
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
 
-// --- WiFi Setup ---
+// WiFi Setup 
 void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -33,7 +33,7 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-// --- Reconnect to MQTT ---
+// Reconnect to MQTT 
 void reconnect() {
   while (!mqtt.connected()) {
     Serial.print("Connecting to MQTT... ");
@@ -55,7 +55,7 @@ void reconnect() {
   }
 }
 
-// --- Handle Incoming Messages ---
+// Handle Incoming Messages 
 void callback(char *topic, byte *payload, unsigned int length) {
   static char msg[256];
   length = min(length, (unsigned int)(sizeof(msg) - 1));
