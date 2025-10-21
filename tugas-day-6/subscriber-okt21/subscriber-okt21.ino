@@ -98,12 +98,26 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if (strcmp(topic, TOPIC_JSON) == 0) {
     JsonDocument doc;
     if (deserializeJson(doc, msg) == DeserializationError::Ok) {
-      const char* t = doc["temperature"] | "-";
-      const char* h = doc["humidity"]    | "-";
-      strncpy(lastTemp, t, sizeof(lastTemp) - 1);
-      lastTemp[sizeof(lastTemp) - 1] = '\0';
-      strncpy(lastHum,  h, sizeof(lastHum)  - 1);
-      lastHum[sizeof(lastHum)  - 1] = '\0';
+      // temperature: accept string or number
+      if (doc["temperature"].is<const char*>()) {
+        const char* t = doc["temperature"];
+        strncpy(lastTemp, t, sizeof(lastTemp) - 1);
+        lastTemp[sizeof(lastTemp) - 1] = '\0';
+      } else if (doc["temperature"].is<float>() || doc["temperature"].is<double>() || doc["temperature"].is<long>()) {
+        float t = doc["temperature"];
+        snprintf(lastTemp, sizeof(lastTemp), "%.0f", t); // round to integer °C
+      }
+
+      // humidity: accept string or number
+      if (doc["humidity"].is<const char*>()) {
+        const char* h = doc["humidity"];
+        strncpy(lastHum, h, sizeof(lastHum) - 1);
+        lastHum[sizeof(lastHum) - 1] = '\0';
+      } else if (doc["humidity"].is<float>() || doc["humidity"].is<double>() || doc["humidity"].is<long>()) {
+        float h = doc["humidity"];
+        snprintf(lastHum, sizeof(lastHum), "%.0f", h);   // round to integer %
+      }
+
       updateLCD();
     }
     return;

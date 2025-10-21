@@ -4,8 +4,8 @@
 #include <ModbusMaster.h>
 
 // ===== WiFi / MQTT =====
-const char* ssid = "SUPER-ORCA";
-const char* password = "zxcvbnmv";
+const char *ssid = "your ssid";
+const char *password = "your password";
 const char* mqtt_server = "broker.emqx.io";
 
 const char* TOPIC_RELAY = "kelompok1/relay";
@@ -34,6 +34,8 @@ unsigned long prevMillis = 0;
 ModbusMaster modbus;
 float temperature = NAN;
 float humidity    = NAN;
+bool relay1State = false;
+bool relay2State = false;
 
 //  RS485 DE/RE control 
 void modbusPreTransmission() {
@@ -61,23 +63,42 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+void publishRelayStateRetained() {
+  StaticJsonDocument<128> doc;
+  doc["relay1"] = relay1State ? 1 : 0;
+  doc["relay2"] = relay2State ? 1 : 0;
+
+  char payload[64];
+  serializeJson(doc, payload, sizeof(payload));
+
+  // IMPORTANT: retained = true -> subscribers (baru/terlambat) selalu dapat state terbaru
+  mqtt.publish(TOPIC_RELAY, payload, true);
+}
+
+void applyRelay(bool r1, bool r2) {
+  relay1State = r1;
+  relay2State = r2;
+  digitalWrite(RELAY1, r1 ? LOW : HIGH);  // active-LOW
+  digitalWrite(RELAY2, r2 ? LOW : HIGH);
+}
+
 //  MQTT inbound control 
 void callback(char* topic, byte* payload, unsigned int length) {
-  if (strcmp(topic, TOPIC_RELAY) != 0) return;
+  if (strcmp(topic, TOPIC_RELAY) == 0) {
+    StaticJsonDocument<128> doc;        // use a single, consistent doc
+    DeserializationError err = deserializeJson(doc, payload, length);
+    if (!err) {
+      bool r1 = relay1State, r2 = relay2State;
+      if (doc.containsKey("relay1")) r1 = ((int)doc["relay1"] == 1);
+      if (doc.containsKey("relay2")) r2 = ((int)doc["relay2"] == 1);
 
-  // Parse compact JSON payload
-  StaticJsonDocument<128> doc;
-  DeserializationError err = deserializeJson(doc, payload, length);
-  if (err) return; // ignore malformed payload
-
-  // Apply relay states (active LOW)
-  if (doc.containsKey("relay1")) {
-    int v = doc["relay1"];           // 0 or 1
-    digitalWrite(RELAY1, v ? LOW : HIGH); // 1->ON, 0->OFF
-  }
-  if (doc.containsKey("relay2")) {
-    int v = doc["relay2"]; 
-    digitalWrite(RELAY2, v ? LOW : HIGH);
+      // Apply only on change to avoid echo loops
+      if (r1 != relay1State || r2 != relay2State) {
+        applyRelay(r1, r2);
+        publishRelayStateRetained();     // authoritative retained state
+      }
+    }
+    return;
   }
 }
 
@@ -90,6 +111,7 @@ void reconnect() {
       Serial.println("connected");
       mqtt.subscribe(TOPIC_RELAY);
       Serial.println("Subscribed: " + String(TOPIC_RELAY));
+      publishRelayStateRetained();
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqtt.state());
@@ -101,11 +123,14 @@ void reconnect() {
 
 void publish_json() {
   StaticJsonDocument<128> doc;
-  doc["temperature"] = temperature;
+  doc["temperature"] = temperature;  // numbers are fine
   doc["humidity"]    = humidity;
+
   char json[128];
   serializeJson(doc, json);
-  mqtt.publish(TOPIC_JSON, json);
+
+  // Retain so late subscribers immediately get the latest reading
+  mqtt.publish(TOPIC_JSON, json, true);
 }
 
 //  Read XY-MD02 via Modbus 
