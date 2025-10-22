@@ -4,8 +4,8 @@
 #include <LiquidCrystal_I2C.h>
 
 // WiFi Credentials
-const char *ssid = "your ssid";
-const char *password = "your password";
+const char *ssid = "Jemzgonz";
+const char *password = "11111111";
 
 // MQTT Broker & Topics
 const char *mqtt_server = "broker.emqx.io";
@@ -185,7 +185,7 @@ void updateLCD() {
   lcd.setCursor(0, 1);
   lcd.print("R1: ");
   lcd.print(relay1 ? "ON " : "OFF");
-  lcd.print("R2: ");
+  lcd.print(" R2: ");
   lcd.print(relay2 ? "ON" : "OFF");
   lcd.print("  ");      // pad to clear tail
 }
