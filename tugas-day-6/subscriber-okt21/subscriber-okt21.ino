@@ -4,8 +4,8 @@
 #include <LiquidCrystal_I2C.h>
 
 // WiFi Credentials
-const char *ssid = "Jemzgonz";
-const char *password = "11111111";
+const char *ssid = "your ssid";
+const char *password = "your password";
 
 // MQTT Broker & Topics
 const char *mqtt_server = "broker.emqx.io";
