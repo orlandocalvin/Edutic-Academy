@@ -96,7 +96,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
 
   // Sensor JSON from publisher
   if (strcmp(topic, TOPIC_JSON) == 0) {
-    JsonDocument doc;
+    StaticJsonDocument<128> doc;
     if (deserializeJson(doc, msg) == DeserializationError::Ok) {
       // temperature: accept string or number
       if (doc["temperature"].is<const char*>()) {
